@@ -113,7 +113,10 @@ OpenAI API          Python Research Engine
 
           Frontend
 
-The React frontend provides the research workflow and user interface.
+
+
+
+##The React frontend provides the research workflow and user interface.
 
 Technologies:
 
