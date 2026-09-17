@@ -1,6 +1,9 @@
 import { useState } from "react";
 import "./App.css";
 
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 function App() {
   const [stage, setStage] = useState("ask");
 
@@ -51,7 +54,7 @@ function App() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/analyze",
+        `${API_URL}/api/analyze`,
         {
           method: "POST",
           headers: {
@@ -117,7 +120,7 @@ function App() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/experiment",
+        `${API_URL}/api/experiment`,
         {
           method: "POST",
           headers: {
@@ -185,6 +188,7 @@ function App() {
       <header className="header">
         <div>
           <div className="brand">TradeLens</div>
+
           <div className="tagline">
             Turn vague trading ideas into testable research experiments.
           </div>
@@ -192,7 +196,6 @@ function App() {
       </header>
 
       <main className="container">
-
         <div className="steps">
           <span className={stage === "ask" ? "active" : ""}>
             01 · ASK
@@ -255,7 +258,6 @@ function App() {
 
         {stage === "clarify" && analysis && (
           <section className="card">
-
             <div className="eyebrow">
               02 · CLARIFY
             </div>
@@ -269,6 +271,7 @@ function App() {
             <div className="clarification-item">
               <div>
                 <strong>RESEARCH CONDITION</strong>
+
                 <p>
                   {getConditionDescription()}
                 </p>
@@ -287,12 +290,15 @@ function App() {
                   <option value="1">
                     Daily decline ≥ 1%
                   </option>
+
                   <option value="2">
                     Daily decline ≥ 2%
                   </option>
+
                   <option value="3">
                     Daily decline ≥ 3%
                   </option>
+
                   <option value="5">
                     Daily decline ≥ 5%
                   </option>
@@ -331,6 +337,7 @@ function App() {
             <div className="clarification-item">
               <div>
                 <strong>ENTRY TIMING</strong>
+
                 <p>
                   Next trading day open
                 </p>
@@ -340,6 +347,7 @@ function App() {
             <div className="clarification-item">
               <div>
                 <strong>HOLDING PERIOD</strong>
+
                 <p>
                   How long should the position be held?
                 </p>
@@ -449,7 +457,6 @@ function App() {
 
         {stage === "define" && analysis && (
           <section className="card">
-
             <div className="eyebrow">
               03 · DEFINE
             </div>
@@ -457,7 +464,6 @@ function App() {
             <h1>Experiment definition</h1>
 
             <div className="experiment-grid">
-
               <div>
                 <span>MARKET</span>
                 <strong>NIFTY</strong>
@@ -465,6 +471,7 @@ function App() {
 
               <div>
                 <span>SIGNAL</span>
+
                 <strong>
                   {getConditionDescription()}
                 </strong>
@@ -472,6 +479,7 @@ function App() {
 
               <div>
                 <span>ENTRY</span>
+
                 <strong>
                   Next trading day open
                 </strong>
@@ -479,6 +487,7 @@ function App() {
 
               <div>
                 <span>HOLDING PERIOD</span>
+
                 <strong>
                   {holdingPeriod} trading days
                 </strong>
@@ -486,6 +495,7 @@ function App() {
 
               <div>
                 <span>TEST PERIOD</span>
+
                 <strong>
                   {testStart} → {testEnd}
                 </strong>
@@ -493,6 +503,7 @@ function App() {
 
               <div>
                 <span>ROUND-TRIP COST</span>
+
                 <strong>
                   {transactionCost}%
                 </strong>
@@ -500,11 +511,11 @@ function App() {
 
               <div>
                 <span>DATA</span>
+
                 <strong>
                   Illustrative sample
                 </strong>
               </div>
-
             </div>
 
             <div className="hypothesis">
@@ -530,13 +541,11 @@ function App() {
                 {error}
               </div>
             )}
-
           </section>
         )}
 
         {stage === "test" && result && (
           <section className="card">
-
             <div className="eyebrow">
               04 · TEST
             </div>
@@ -549,9 +558,9 @@ function App() {
             </p>
 
             <div className="result-summary">
-
               <div>
                 <span>Signal</span>
+
                 <strong>
                   {getConditionDescription()}
                 </strong>
@@ -559,6 +568,7 @@ function App() {
 
               <div>
                 <span>Entry</span>
+
                 <strong>
                   Next trading day open
                 </strong>
@@ -566,6 +576,7 @@ function App() {
 
               <div>
                 <span>Holding</span>
+
                 <strong>
                   {holdingPeriod} trading days
                 </strong>
@@ -573,11 +584,11 @@ function App() {
 
               <div>
                 <span>Test period</span>
+
                 <strong>
                   {testStart} → {testEnd}
                 </strong>
               </div>
-
             </div>
 
             <h2>Test completed</h2>
@@ -592,9 +603,9 @@ function App() {
             </p>
 
             <div className="metrics">
-
               <div>
                 <span>SIGNALS FOUND</span>
+
                 <strong>
                   {result.signals}
                 </strong>
@@ -602,6 +613,7 @@ function App() {
 
               <div>
                 <span>HOLDING PERIOD</span>
+
                 <strong>
                   {holdingPeriod} days
                 </strong>
@@ -609,11 +621,11 @@ function App() {
 
               <div>
                 <span>DATA</span>
+
                 <strong>
                   Illustrative sample
                 </strong>
               </div>
-
             </div>
 
             <button
@@ -622,13 +634,11 @@ function App() {
             >
               View Results →
             </button>
-
           </section>
         )}
 
         {stage === "learn" && result && (
           <section className="card">
-
             <div className="eyebrow">
               05 · LEARN
             </div>
@@ -642,9 +652,9 @@ function App() {
             </p>
 
             <div className="result-grid">
-
               <div>
                 <span>SIGNALS</span>
+
                 <strong>
                   {result.signals}
                 </strong>
@@ -652,6 +662,7 @@ function App() {
 
               <div>
                 <span>AVERAGE RETURN</span>
+
                 <strong>
                   {result.average_return}%
                 </strong>
@@ -659,6 +670,7 @@ function App() {
 
               <div>
                 <span>MEDIAN RETURN</span>
+
                 <strong>
                   {result.median_return}%
                 </strong>
@@ -666,6 +678,7 @@ function App() {
 
               <div>
                 <span>WIN RATE</span>
+
                 <strong>
                   {result.win_rate}%
                 </strong>
@@ -673,6 +686,7 @@ function App() {
 
               <div>
                 <span>BEST RETURN</span>
+
                 <strong>
                   +{result.best_return}%
                 </strong>
@@ -680,15 +694,14 @@ function App() {
 
               <div>
                 <span>WORST RETURN</span>
+
                 <strong>
                   {result.worst_return}%
                 </strong>
               </div>
-
             </div>
 
             <div className="insight">
-
               <h3>WHAT THE DATA SHOWS</h3>
 
               <p>
@@ -703,12 +716,12 @@ function App() {
                 </strong>{" "}
                 in the selected sample period.
               </p>
-
             </div>
 
             <div className="warning">
-
-              <h3>IMPORTANT LIMITATIONS & RISKS</h3>
+              <h3>
+                IMPORTANT LIMITATIONS & RISKS
+              </h3>
 
               <ul>
                 <li>
@@ -718,7 +731,9 @@ function App() {
                 </li>
 
                 <li>
-                  <strong>Transaction costs & slippage:</strong>{" "}
+                  <strong>
+                    Transaction costs & slippage:
+                  </strong>{" "}
                   real execution can reduce returns.
                 </li>
 
@@ -745,7 +760,6 @@ function App() {
                 Therefore, these results are an experiment
                 output, not a trading recommendation.
               </p>
-
             </div>
 
             <button
@@ -754,10 +768,8 @@ function App() {
             >
               ← Start New Question
             </button>
-
           </section>
         )}
-
       </main>
     </div>
   );
