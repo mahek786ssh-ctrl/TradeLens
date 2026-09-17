@@ -6,7 +6,7 @@ const { spawn } = require("child_process");
 dotenv.config();
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
@@ -21,21 +21,6 @@ app.get("/api/health", (req, res) => {
     ai_enabled: Boolean(OPENAI_API_KEY),
   });
 });
-
-
-/*
-  -------------------------------------------------------
-  EXACT CONDITION DETECTION
-  -------------------------------------------------------
-
-  Important product decision:
-
-  If the user explicitly says "three consecutive losing days",
-  we do NOT ask the AI to reinterpret it.
-
-  This prevents an LLM from changing a clearly stated research
-  condition into something else such as "daily decline >= 2%".
-*/
 
 const numberWords = {
   one: 1,
@@ -52,16 +37,6 @@ const numberWords = {
 
 function detectConsecutiveLosses(question) {
   const text = question.toLowerCase();
-
-  /*
-    Matches examples such as:
-
-    three consecutive losing days
-    3 consecutive losing days
-    three straight losing days
-    3 straight loss days
-    three consecutive loss days
-  */
 
   const numericMatch = text.match(
     /\b(\d+)\s+(?:consecutive|straight)\s+(?:losing|loss)\s+days?\b/i
@@ -95,13 +70,6 @@ function detectConsecutiveLosses(question) {
   return null;
 }
 
-
-/*
-  -------------------------------------------------------
-  OPENAI ANALYSIS
-  -------------------------------------------------------
-*/
-
 function extractResponseText(response) {
   if (response.output_text) {
     return response.output_text;
@@ -121,7 +89,6 @@ function extractResponseText(response) {
 
   return "";
 }
-
 
 async function analyzeWithAI(question) {
   const prompt = `
@@ -191,9 +158,7 @@ Rules:
   if (!response.ok) {
     const errorText = await response.text();
 
-    throw new Error(
-      `OpenAI API error: ${errorText}`
-    );
+    throw new Error(`OpenAI API error: ${errorText}`);
   }
 
   const data = await response.json();
@@ -201,9 +166,7 @@ Rules:
   const text = extractResponseText(data);
 
   if (!text) {
-    throw new Error(
-      "AI returned an empty response."
-    );
+    throw new Error("AI returned an empty response.");
   }
 
   const cleaned = text
@@ -215,28 +178,17 @@ Rules:
   return JSON.parse(cleaned);
 }
 
-
-/*
-  -------------------------------------------------------
-  DETERMINISTIC FALLBACK
-  -------------------------------------------------------
-*/
-
 function fallbackAnalysis(question) {
-
-  const consecutiveDays =
-    detectConsecutiveLosses(question);
+  const consecutiveDays = detectConsecutiveLosses(question);
 
   if (consecutiveDays !== null) {
-
     return {
       reasoning:
         "The question defines a consecutive-loss condition, but entry timing, holding period, test period, and trading costs still need to be specified.",
 
       condition: {
         type: "consecutive_losses",
-        description:
-          `${consecutiveDays} consecutive losing days`,
+        description: `${consecutiveDays} consecutive losing days`,
         threshold: null,
         consecutive_days: consecutiveDays,
       },
@@ -249,9 +201,7 @@ function fallbackAnalysis(question) {
       ],
 
       proposed: {
-        entry_timing:
-          "next trading day open",
-
+        entry_timing: "next trading day open",
         holding_period: 3,
 
         test_period: {
@@ -266,13 +216,9 @@ function fallbackAnalysis(question) {
 
   const lower = question.toLowerCase();
 
-  const percentMatch = lower.match(
-    /(\d+(?:\.\d+)?)\s*%/
-  );
+  const percentMatch = lower.match(/(\d+(?:\.\d+)?)\s*%/);
 
-  const threshold = percentMatch
-    ? Number(percentMatch[1])
-    : 2;
+  const threshold = percentMatch ? Number(percentMatch[1]) : 2;
 
   return {
     reasoning:
@@ -280,8 +226,7 @@ function fallbackAnalysis(question) {
 
     condition: {
       type: "daily_decline",
-      description:
-        `daily decline ≥ ${threshold}%`,
+      description: `daily decline ≥ ${threshold}%`,
       threshold,
       consecutive_days: null,
     },
@@ -295,9 +240,7 @@ function fallbackAnalysis(question) {
     ],
 
     proposed: {
-      entry_timing:
-        "next trading day open",
-
+      entry_timing: "next trading day open",
       holding_period: 3,
 
       test_period: {
@@ -310,17 +253,8 @@ function fallbackAnalysis(question) {
   };
 }
 
-
-/*
-  -------------------------------------------------------
-  ANALYZE API
-  -------------------------------------------------------
-*/
-
 app.post("/api/analyze", async (req, res) => {
-
   try {
-
     const { question } = req.body;
 
     if (!question || !question.trim()) {
@@ -329,35 +263,20 @@ app.post("/api/analyze", async (req, res) => {
       });
     }
 
-
-    /*
-      FIRST:
-      Check whether the user explicitly specified
-      consecutive losing days.
-
-      This is deterministic and takes priority over AI.
-    */
-
     const detectedConsecutiveDays =
       detectConsecutiveLosses(question);
 
-
     if (detectedConsecutiveDays !== null) {
-
       const analysis = {
         reasoning:
           "The question explicitly defines a consecutive-loss condition. Entry timing, holding period, test period, and trading costs still need to be specified.",
 
         condition: {
           type: "consecutive_losses",
-
           description:
             `${detectedConsecutiveDays} consecutive losing days`,
-
           threshold: null,
-
-          consecutive_days:
-            detectedConsecutiveDays,
+          consecutive_days: detectedConsecutiveDays,
         },
 
         missing: [
@@ -368,9 +287,7 @@ app.post("/api/analyze", async (req, res) => {
         ],
 
         proposed: {
-          entry_timing:
-            "next trading day open",
-
+          entry_timing: "next trading day open",
           holding_period: 3,
 
           test_period: {
@@ -390,61 +307,34 @@ app.post("/api/analyze", async (req, res) => {
       return res.json(analysis);
     }
 
-
-    /*
-      If the condition is not explicitly detectable,
-      AI can interpret the natural-language question.
-    */
-
     let analysis;
 
     if (OPENAI_API_KEY) {
-
       try {
-
-        analysis =
-          await analyzeWithAI(question);
-
+        analysis = await analyzeWithAI(question);
       } catch (error) {
-
         console.error(
           "AI analysis failed:",
           error.message
         );
 
-        analysis =
-          fallbackAnalysis(question);
+        analysis = fallbackAnalysis(question);
       }
-
     } else {
-
-      analysis =
-        fallbackAnalysis(question);
+      analysis = fallbackAnalysis(question);
     }
 
-
     res.json(analysis);
-
   } catch (error) {
-
     console.error(error);
 
     res.status(500).json({
-      error:
-        "Unable to analyze the question.",
+      error: "Unable to analyze the question.",
     });
   }
 });
 
-
-/*
-  -------------------------------------------------------
-  EXPERIMENT API
-  -------------------------------------------------------
-*/
-
 app.post("/api/experiment", (req, res) => {
-
   const {
     condition_type,
     fall_threshold,
@@ -455,86 +345,55 @@ app.post("/api/experiment", (req, res) => {
     test_end,
   } = req.body;
 
-
   const pythonProcess = spawn(
     "python",
     ["research_engine.py"],
     {
-      cwd:
-        __dirname + "/research",
+      cwd: __dirname + "/research",
     }
   );
-
 
   let output = "";
   let errorOutput = "";
 
+  pythonProcess.stdout.on("data", (data) => {
+    output += data.toString();
+  });
 
-  pythonProcess.stdout.on(
-    "data",
-    (data) => {
-      output += data.toString();
+  pythonProcess.stderr.on("data", (data) => {
+    errorOutput += data.toString();
+  });
+
+  pythonProcess.on("close", (code) => {
+    if (code !== 0) {
+      console.error(errorOutput);
+
+      return res.status(500).json({
+        error: "Research engine failed.",
+        details: errorOutput,
+      });
     }
-  );
 
+    try {
+      const result = JSON.parse(output);
 
-  pythonProcess.stderr.on(
-    "data",
-    (data) => {
-      errorOutput += data.toString();
+      res.json(result);
+    } catch (error) {
+      console.error(
+        "Invalid Python output:",
+        output
+      );
+
+      res.status(500).json({
+        error: "Could not parse research engine result.",
+      });
     }
-  );
-
-
-  pythonProcess.on(
-    "close",
-    (code) => {
-
-      if (code !== 0) {
-
-        console.error(
-          errorOutput
-        );
-
-        return res.status(500).json({
-          error:
-            "Research engine failed.",
-
-          details:
-            errorOutput,
-        });
-      }
-
-
-      try {
-
-        const result =
-          JSON.parse(output);
-
-        res.json(result);
-
-      } catch (error) {
-
-        console.error(
-          "Invalid Python output:",
-          output
-        );
-
-        res.status(500).json({
-          error:
-            "Could not parse research engine result.",
-        });
-      }
-    }
-  );
-
+  });
 
   pythonProcess.stdin.write(
     JSON.stringify({
-
       condition_type:
-        condition_type ||
-        "daily_decline",
+        condition_type || "daily_decline",
 
       fall_threshold:
         fall_threshold ?? null,
@@ -542,41 +401,28 @@ app.post("/api/experiment", (req, res) => {
       consecutive_days:
         consecutive_days ?? null,
 
-      holding_period:
-        Number(
-          holding_period || 3
-        ),
+      holding_period: Number(
+        holding_period || 3
+      ),
 
-      transaction_cost:
-        Number(
-          transaction_cost || 0
-        ),
+      transaction_cost: Number(
+        transaction_cost || 0
+      ),
 
       test_start:
-        test_start ||
-        "2026-01-01",
+        test_start || "2026-01-01",
 
       test_end:
-        test_end ||
-        "2026-01-15",
+        test_end || "2026-01-15",
     })
   );
-
 
   pythonProcess.stdin.end();
 });
 
-
-/*
-  -------------------------------------------------------
-  START SERVER
-  -------------------------------------------------------
-*/
-
-app.listen(PORT, () => {
-
+app.listen(PORT, "0.0.0.0", () => {
   console.log(
-    `TradeLens backend running on http://localhost:${PORT}`
+    `TradeLens backend running on port ${PORT}`
   );
 
   console.log(
